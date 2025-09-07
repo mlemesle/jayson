@@ -1,9 +1,15 @@
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, ops::Deref, path::PathBuf};
+
+mod constant;
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Operations {
     operations: Vec<Operation>,
+}
+
+pub trait Op {
+    fn apply(&self, json: &mut serde_json::Value) -> anyhow::Result<()>;
 }
 
 impl Operations {
@@ -14,7 +20,7 @@ impl Operations {
         Ok(ops)
     }
 
-    pub fn apply(&self, json: &serde_json::Value) -> anyhow::Result<serde_json::Value> {
+    pub fn process(&self, json: &serde_json::Value) -> anyhow::Result<serde_json::Value> {
         let mut work_copy = json.clone();
 
         for op in &self.operations {
@@ -28,25 +34,15 @@ impl Operations {
 #[derive(Debug, serde::Deserialize)]
 #[serde(tag = "op", deny_unknown_fields, rename_all = "camelCase")]
 pub enum Operation {
-    Constant {
-        target: String,
-        value: serde_json::Value,
-    },
+    Constant(constant::Constant),
 }
 
-impl Operation {
-    pub fn apply(&self, json: &mut serde_json::Value) -> anyhow::Result<()> {
+impl Deref for Operation {
+    type Target = dyn Op;
+
+    fn deref(&self) -> &Self::Target {
         match self {
-            Operation::Constant { target, value } => {
-                if let Some(object) = json.as_object_mut() {
-                    object.insert(target.clone(), value.clone());
-                    Ok(())
-                } else {
-                    Err(anyhow::anyhow!(
-                        "Can't add a field in a non object json value !"
-                    ))
-                }
-            }
+            Operation::Constant(constant) => constant,
         }
     }
 }

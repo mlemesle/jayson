@@ -14,7 +14,7 @@ fn main() -> anyhow::Result<()> {
         "hello": "there !"
     });
 
-    let modified = operations.apply(&json)?;
+    let modified = operations.process(&json)?;
 
     println!("{}", serde_json::to_string_pretty(&modified)?);
 
