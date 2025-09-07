@@ -1,0 +1,4 @@
+operations:
+  - op: constant
+    target: id
+    value: 42
